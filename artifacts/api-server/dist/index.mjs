@@ -67957,20 +67957,9 @@ var fileUpdateSchema = external_exports.object({
   name: external_exports.string().min(1).optional(),
   parentId: external_exports.number().int().nullable().optional()
 });
-var folderInputSchema = external_exports.object({
-  name: external_exports.string().min(1),
-  parentId: external_exports.number().int().nullable().optional()
-});
 router3.get("/files", requireAuth(), async (req, res) => {
   const { userId } = getAuth(req);
-  const parentIdRaw = req.query.parentId;
-  const parentId = parentIdRaw === void 0 || parentIdRaw === "" || parentIdRaw === "null" ? null : Number(parentIdRaw);
-  let files;
-  if (parentId === null) {
-    files = await db.select().from(filesTable).where(and(eq(filesTable.userId, userId), isNull(filesTable.parentId)));
-  } else {
-    files = await db.select().from(filesTable).where(and(eq(filesTable.userId, userId), eq(filesTable.parentId, parentId)));
-  }
+  const files = await db.select().from(filesTable).where(and(eq(filesTable.userId, userId), eq(filesTable.type, "file")));
   res.json(files);
 });
 router3.get("/files/stats", requireAuth(), async (req, res) => {
@@ -68046,21 +68035,6 @@ router3.delete("/files/:id", requireAuth(), async (req, res) => {
     return;
   }
   res.status(204).send();
-});
-router3.post("/folders", requireAuth(), async (req, res) => {
-  const { userId } = getAuth(req);
-  const parsed = folderInputSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid input" });
-    return;
-  }
-  const [folder] = await db.insert(filesTable).values({
-    userId,
-    name: parsed.data.name,
-    type: "folder",
-    parentId: parsed.data.parentId ?? null
-  }).returning();
-  res.status(201).json(folder);
 });
 var files_default = router3;
 

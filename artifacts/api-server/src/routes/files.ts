@@ -19,30 +19,14 @@ const fileUpdateSchema = z.object({
   parentId: z.number().int().nullable().optional(),
 });
 
-const folderInputSchema = z.object({
-  name: z.string().min(1),
-  parentId: z.number().int().nullable().optional(),
-});
 
 router.get("/files", requireAuth(), async (req, res) => {
   const { userId } = getAuth(req);
-  const parentIdRaw = req.query.parentId;
-  const parentId = parentIdRaw === undefined || parentIdRaw === "" || parentIdRaw === "null"
-    ? null
-    : Number(parentIdRaw);
 
-  let files;
-  if (parentId === null) {
-    files = await db
-      .select()
-      .from(filesTable)
-      .where(and(eq(filesTable.userId, userId!), isNull(filesTable.parentId)));
-  } else {
-    files = await db
-      .select()
-      .from(filesTable)
-      .where(and(eq(filesTable.userId, userId!), eq(filesTable.parentId, parentId)));
-  }
+  const files = await db
+    .select()
+    .from(filesTable)
+    .where(and(eq(filesTable.userId, userId!), eq(filesTable.type, "file")));
 
   res.json(files);
 });
@@ -163,25 +147,5 @@ router.delete("/files/:id", requireAuth(), async (req, res) => {
   res.status(204).send();
 });
 
-router.post("/folders", requireAuth(), async (req, res) => {
-  const { userId } = getAuth(req);
-  const parsed = folderInputSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid input" });
-    return;
-  }
-
-  const [folder] = await db
-    .insert(filesTable)
-    .values({
-      userId: userId!,
-      name: parsed.data.name,
-      type: "folder",
-      parentId: parsed.data.parentId ?? null,
-    })
-    .returning();
-
-  res.status(201).json(folder);
-});
 
 export default router;
